@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
-from transformers import pipeline
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 app = Flask(__name__)
-sentiment_pipeline = pipeline("sentiment-analysis")
+analyzer = SentimentIntensityAnalyzer()
 
 @app.route('/sentiment', methods=['POST'])
 def sentiment():
@@ -14,20 +14,14 @@ def sentiment():
         }), 400
 
     input_text = request.json['input']
-
     try:
-        results = sentiment_pipeline(input_text)
-        response = []
-
-        for res in results:
-            response.append({
-                "Sentiment": res["label"],
-                "Confidence": round(res["score"], 3)
-            })
+        scores = analyzer.polarity_scores(input_text)
+        compound = scores['compound']
+        sentiment = "POSITIVE" if compound > 0.05 else "NEGATIVE" if compound < -0.05 else "NEUTRAL"
 
         return jsonify({
             "Status": [{"MessageCode": "S", "MessageText": "OK"}],
-            "ReturnData": response,
+            "ReturnData": [{"Sentiment": sentiment, "Confidence": round(abs(compound), 3)}],
             "DevelopedBy": "Vinod Kumar"
         })
 
